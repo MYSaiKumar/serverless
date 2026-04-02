@@ -20,6 +20,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+
+
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
@@ -46,10 +48,20 @@ jobs:
         with:
           name: node-app
       
+      # - name: Deploy to Azure Functions
+      #   uses: Azure/functions-action@v1
+      #   with:
+      #     app-name: 'image-resizer-func-vkraft'
+      #     slot-name: 'Production'
+      #     package: '.'   # already inside artifact root
+      #     publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_5DFD9D67A0654CE28698806A7E8536F0 }}
+      - name: Extract artifact to root
+        run: |
+          xcopy image-resizer\* . /E /H /C /I
       - name: Deploy to Azure Functions
         uses: Azure/functions-action@v1
         with:
           app-name: 'image-resizer-func-vkraft'
           slot-name: 'Production'
-          package: '.'   # already inside artifact root
+          package: './'   # keep this
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_5DFD9D67A0654CE28698806A7E8536F0 }}
