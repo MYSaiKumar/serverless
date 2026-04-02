@@ -7,8 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: 'image-resizer'   # ✅ FIXED
-  NODE_VERSION: '18.x'   # ✅ safer version
+  NODE_VERSION: '18.x'
 
 jobs:
   build:
@@ -20,23 +19,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-
-
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install dependencies
-        working-directory: image-resizer   # ✅ FIXED
+        working-directory: image-resizer
         run: |
           npm install
 
+      # ✅ NEW: Zip the correct structure
+      - name: Zip function app
+        run: |
+          cd image-resizer
+          powershell Compress-Archive -Path * -DestinationPath ../release.zip
+
+      # ✅ Upload zip instead of folder
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: image-resizer   # ✅ FIXED
+          path: release.zip
 
   deploy:
     runs-on: windows-latest
@@ -47,21 +51,16 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: node-app
-      
-      # - name: Deploy to Azure Functions
-      #   uses: Azure/functions-action@v1
-      #   with:
-      #     app-name: 'image-resizer-func-vkraft'
-      #     slot-name: 'Production'
-      #     package: '.'   # already inside artifact root
-      #     publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_5DFD9D67A0654CE28698806A7E8536F0 }}
-      - name: Extract artifact to root
+
+      # ✅ Extract zip properly
+      - name: Unzip package
         run: |
-          xcopy image-resizer\* . /E /H /C /I
+          powershell Expand-Archive -Path release.zip -DestinationPath .
+
       - name: Deploy to Azure Functions
         uses: Azure/functions-action@v1
         with:
           app-name: 'image-resizer-func-vkraft'
           slot-name: 'Production'
-          package: './'   # keep this
+          package: '.'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_5DFD9D67A0654CE28698806A7E8536F0 }}
